@@ -1,12 +1,15 @@
+from flask import Flask, request, jsonify
+from pytrends.request import TrendReq
 import logging
-from flask import Flask
 
 app = Flask(__name__)
 
-# Set up basic logging configuration
+# Set up Google Trends API
+pytrends = TrendReq(hl='en-US', tz=360)
+
+# Set up basic logging
 logging.basicConfig(level=logging.INFO)
 
-# Example log entries
 @app.route('/')
 def home():
     app.logger.info('Home endpoint accessed')
@@ -27,17 +30,15 @@ def get_trends():
         # Get interest over time for the search query
         trends_data = pytrends.interest_over_time()
 
-        # Check if trends data is empty
         if trends_data.empty:
             app.logger.warning(f"No data found for query: {search_query}")
             return jsonify({'error': 'No data found for this query'}), 404
 
-        # Convert the trends data to a dictionary and send as JSON response
+        # Convert trends data to a dictionary and return as JSON
         trends_dict = trends_data.reset_index().to_dict(orient='records')
         return jsonify({'search_query': search_query, 'trends': trends_dict})
 
     except Exception as e:
-        # Log any exception for debugging
         app.logger.error(f"Error fetching trends data: {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
 
