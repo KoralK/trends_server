@@ -1,37 +1,39 @@
-from flask import Flask, request, jsonify
-from pytrends.request import TrendReq
+import logging
+from flask import Flask
 
 app = Flask(__name__)
 
-# Initialize Google Trends API
-pytrends = TrendReq(hl='en-US', tz=360)
+# Set up basic logging configuration
+logging.basicConfig(level=logging.INFO)
 
+# Example log entries
 @app.route('/')
 def home():
+    app.logger.info('Home endpoint accessed')
     return "Google Trends API is running"
 
 @app.route('/trends', methods=['GET'])
 def get_trends():
-    # Get search query from the request
     search_query = request.args.get('q')
 
+    print(f"Search query: {search_query}")  # This will print to Render logs
+
     if not search_query:
+        print("Error: No search query provided")
         return jsonify({'error': 'Please provide a search query (q)'}), 400
 
+    # Rest of your logic
+
     try:
-        # Build the payload for the search query
-        pytrends.build_payload([search_query], cat=0, timeframe='now 7-d', geo='US', gprop='')
+        # Log the search query
+        app.logger.info(f"Fetching trends data for: {search_query}")
+        
+        # Existing logic to fetch trends data...
+        return jsonify({'success': 'Trends data fetched'})
 
-        # Get interest over time for the search query
-        trends_data = pytrends.interest_over_time()
-
-        # Convert the trends data to a dictionary and send as JSON response
-        if not trends_data.empty:
-            trends_dict = trends_data.reset_index().to_dict(orient='records')
-            return jsonify({'search_query': search_query, 'trends': trends_dict})
-        else:
-            return jsonify({'error': 'No data found for this query'}), 404
     except Exception as e:
+        # Log any exceptions or errors
+        app.logger.error(f"Error fetching trends data: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
