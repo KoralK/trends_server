@@ -6,6 +6,9 @@ from flask_limiter.util import get_remote_address
 import logging
 import time
 import random
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 
 app = Flask(__name__)
 
@@ -14,8 +17,8 @@ cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT':
 
 # Configure rate limiting
 limiter = Limiter(
-    app,
-    key_func=get_remote_address,
+    get_remote_address,  # key_func as first argument
+    app=app,  # app explicitly passed as keyword argument
     default_limits=["200 per day", "50 per hour"]
 )
 
