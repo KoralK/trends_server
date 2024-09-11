@@ -1,8 +1,12 @@
 from flask import Flask, request, jsonify
 from pytrends.request import TrendReq
+from flask_caching import Cache  # Import Flask-Caching
 import logging
 
 app = Flask(__name__)
+
+# Configure Flask-Caching (Simple in-memory cache)
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 300})  # 5-minute cache
 
 # Set up Google Trends API
 pytrends = TrendReq(hl='en-US', tz=360)
@@ -15,6 +19,8 @@ def home():
     app.logger.info('Home endpoint accessed')
     return "Google Trends API is running"
 
+# Cache the result of trends queries for 5 minutes (300 seconds)
+@cache.cached(timeout=300, query_string=True)
 @app.route('/trends', methods=['GET'])
 def get_trends():
     search_query = request.args.get('q')
@@ -39,7 +45,7 @@ def get_trends():
         return jsonify({'search_query': search_query, 'trends': trends_dict})
 
     except Exception as e:
-        app.logger.error(f"Error fetching trends data: {str(e)}")
+        app.logger.error(f"Error fetching trends data for '{search_query}': {str(e)}")
         return jsonify({'error': 'Internal Server Error', 'details': str(e)}), 500
 
 if __name__ == '__main__':
