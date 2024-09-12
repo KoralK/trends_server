@@ -1,29 +1,41 @@
+import urllib3
+urllib3.disable_warnings()
+import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+import logging
+import time
+import random
 from flask import Flask, request, jsonify
 from pytrends.request import TrendReq
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import logging
-import time
-import random
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from limits import storage
 
+# Monkey patch to fix the compatibility issue
+Retry.DEFAULT_ALLOWED_METHODS = frozenset(['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE'])
+
+# Create a custom session
+session = requests.Session()
+retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+session.mount('https://', HTTPAdapter(max_retries=retries))
 
 app = Flask(__name__)
 
 # Configure Flask-Caching (Simple in-memory cache)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 3600})  # 1-hour cache
 
-# Configure rate limiting
+# Configure rate limiting with filesystem storage
 limiter = Limiter(
-    get_remote_address,  # key_func as first argument
-    app=app,  # app explicitly passed as keyword argument
-    default_limits=["200 per day", "50 per hour"]
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="file:///tmp/flask_limiter_storage"
 )
 
 # Set up Google Trends API with retries and backoff
-pytrends = TrendReq(hl='en-US', tz=360, retries=5, backoff_factor=0.5)
+pytrends = TrendReq(hl='en-US', tz=360, requests_args={'verify': False}, session=session)
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
