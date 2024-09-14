@@ -11,7 +11,6 @@ from pytrends.request import TrendReq
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from limits import storage
 
 # Monkey patch to fix the compatibility issue
 Retry.DEFAULT_ALLOWED_METHODS = frozenset(['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS', 'TRACE'])
@@ -26,12 +25,12 @@ app = Flask(__name__)
 # Configure Flask-Caching (Simple in-memory cache)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache', 'CACHE_DEFAULT_TIMEOUT': 3600})  # 1-hour cache
 
-# Configure rate limiting with filesystem storage
+# Configure rate limiting with in-memory storage
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["200 per day", "50 per hour"],
-    storage_uri="file:///tmp/flask_limiter_storage"
+    storage_uri="memory://"
 )
 
 # Set up Google Trends API with retries and backoff
@@ -54,7 +53,7 @@ def fetch_trends_with_backoff(search_query):
         except Exception as e:
             if attempt < max_retries - 1:
                 sleep_time = (2 ** attempt) + random.random()
-                app.logger.warning(f"Attempt {attempt + 1} failed. Retrying in {sleep_time:.2f} seconds.")
+                app.logger.warning(f"Attempt {attempt + 1} failed. Error: {str(e)}. Retrying in {sleep_time:.2f} seconds.")
                 time.sleep(sleep_time)
             else:
                 raise e
