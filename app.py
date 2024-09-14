@@ -34,7 +34,7 @@ limiter = Limiter(
 )
 
 # Set up Google Trends API with retries and backoff
-pytrends = TrendReq(hl='en-US', tz=360, requests_args={'verify': False}, session=session)
+pytrends = TrendReq(hl='en-US', tz=360)
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
